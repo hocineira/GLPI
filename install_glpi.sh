@@ -150,10 +150,10 @@ rm /tmp/glpi_setup.sql
 print_success "Base de données 'glpidb' et utilisateur 'glpi' créés"
 
 ##############################################################################
-# 4. INSTALLATION DE GLPI
+# 3. INSTALLATION DE GLPI
 ##############################################################################
 
-print_section "4. INSTALLATION DE GLPI"
+print_section "3. INSTALLATION DE GLPI"
 
 print_info "Déplacement vers le répertoire /tmp/..."
 cd /tmp/
