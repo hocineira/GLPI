@@ -450,6 +450,80 @@ echo "  - normal/normal (compte normal)"
 echo "  - post-only/postonly (compte post-only)"
 echo ""
 
+##############################################################################
+# TEST DE RÉSOLUTION DNS AVEC LE SERVEUR AD
+##############################################################################
+
+# Si le DNS a été configuré, proposer un test de résolution
+if [[ $CONFIGURE_DNS =~ ^[Oo][Uu][Ii]$ ]] && [[ $CONFIRM_DNS =~ ^[Oo][Uu][I]$ ]]; then
+    echo ""
+    print_section "TEST DE RÉSOLUTION DNS"
+    
+    print_info "Voulez-vous tester la résolution de nom avec le serveur AD?"
+    print_info "Serveur AD configuré: ${AD_FQDN}"
+    echo ""
+    
+    read -p "Effectuer le test de résolution DNS maintenant? (oui/non) [oui]: " TEST_DNS
+    TEST_DNS=${TEST_DNS:-oui}
+    
+    if [[ $TEST_DNS =~ ^[Oo][Uu][Ii]$ ]]; then
+        echo ""
+        print_info "Test de résolution DNS en cours..."
+        echo ""
+        
+        # Test 1: nslookup
+        if command -v nslookup &> /dev/null; then
+            print_info "═══ Test avec nslookup ═══"
+            if nslookup ${AD_FQDN} 2>&1 | grep -q "Address:"; then
+                nslookup ${AD_FQDN}
+                print_success "✓ Résolution DNS avec nslookup réussie"
+            else
+                nslookup ${AD_FQDN}
+                print_error "✗ Échec de résolution avec nslookup"
+            fi
+            echo ""
+        fi
+        
+        # Test 2: dig (si disponible)
+        if command -v dig &> /dev/null; then
+            print_info "═══ Test avec dig ═══"
+            DIG_RESULT=$(dig ${AD_FQDN} +short)
+            if [ -n "$DIG_RESULT" ]; then
+                echo "Adresse IP résolue: $DIG_RESULT"
+                print_success "✓ Résolution DNS avec dig réussie"
+            else
+                print_warning "⚠ Aucune réponse de dig"
+            fi
+            echo ""
+        fi
+        
+        # Test 3: Ping
+        print_info "═══ Test de ping vers ${AD_FQDN} ═══"
+        if ping -c 3 ${AD_FQDN} 2>&1; then
+            echo ""
+            print_success "✓✓✓ SUCCÈS: Le serveur AD ${AD_FQDN} est accessible!"
+            print_success "✓✓✓ La résolution DNS fonctionne parfaitement!"
+        else
+            echo ""
+            print_warning "⚠⚠⚠ ATTENTION: Impossible de pinguer le serveur AD"
+            print_info "Causes possibles:"
+            echo "  - Le serveur AD n'est pas démarré"
+            echo "  - Le pare-feu bloque les pings (ICMP)"
+            echo "  - Problème réseau entre les serveurs"
+            print_info "Note: La résolution DNS peut fonctionner même si le ping échoue"
+        fi
+        
+        echo ""
+        print_info "═══ Configuration DNS active ═══"
+        resolvectl status | grep -A 8 "DNS Servers" || systemd-resolve --status | grep -A 8 "DNS Servers"
+        
+    else
+        print_info "Test DNS ignoré - Vous pourrez le tester plus tard avec:"
+        echo "  nslookup ${AD_FQDN}"
+        echo "  ping ${AD_FQDN}"
+    fi
+fi
+
 print_section "SCRIPT D'INSTALLATION TERMINÉ"
 
 print_info "Pour vérifier les services:"
@@ -460,3 +534,21 @@ echo ""
 
 print_success "Bonne utilisation de GLPI! 🎉"
 echo ""
+
+##############################################################################
+# MENTIONS DE L'AUTEUR
+##############################################################################
+
+echo ""
+print_section "INFORMATIONS SUR LE SCRIPT"
+echo ""
+print_info "╔════════════════════════════════════════════════════════════════╗"
+print_info "║                                                                ║"
+print_info "║           Fait par IRATNI Hocine                               ║"
+print_info "║                                                                ║"
+print_info "║   Pour toute information contactez moi par mail sur :          ║"
+print_info "║                  hocineira@gmail.com                           ║"
+print_info "║                                                                ║"
+print_info "╚════════════════════════════════════════════════════════════════╝"
+echo ""
+
