@@ -233,41 +233,149 @@ systemctl restart apache2
 print_success "Apache redémarré"
 
 ##############################################################################
-# 6. TEST DE RÉSOLUTION DNS
+# 5. CONFIGURATION DNS ET TESTS (OPTIONNEL - RECOMMANDÉ)
 ##############################################################################
 
-print_section "6. TEST DE RÉSOLUTION DNS"
+print_section "5. INSTALLATION GLPI TERMINÉE - CONFIGURATION DNS"
 
-print_info "Test de résolution DNS pour: $AD_FQDN"
+print_success "✓ L'installation de GLPI est terminée avec succès!"
+echo ""
+print_info "Pour l'intégration avec Active Directory (LDAPS), il est recommandé de"
+print_info "configurer le DNS maintenant pour permettre la résolution des noms de domaine."
 echo ""
 
-# Test avec nslookup
-if command -v nslookup &> /dev/null; then
-    print_info "Test avec nslookup:"
-    nslookup $AD_FQDN
-    echo ""
+# Vérifier si le DNS est déjà configuré
+DNS_CONFIGURED=false
+if [ -f "/etc/systemd/resolved.conf" ]; then
+    if grep -q "^DNS=" /etc/systemd/resolved.conf && grep -q "^Domains=" /etc/systemd/resolved.conf; then
+        print_info "Configuration DNS détectée dans /etc/systemd/resolved.conf"
+        
+        # Afficher la configuration actuelle
+        echo ""
+        print_info "Configuration DNS actuelle:"
+        grep "^DNS=" /etc/systemd/resolved.conf
+        grep "^Domains=" /etc/systemd/resolved.conf
+        echo ""
+        
+        DNS_CONFIGURED=true
+    fi
 fi
 
-# Test avec dig
-if command -v dig &> /dev/null; then
-    print_info "Test avec dig:"
-    dig $AD_FQDN +short
-    echo ""
-fi
-
-# Test avec ping
-print_info "Test de ping (1 paquet):"
-if ping -c 1 $AD_FQDN &> /dev/null; then
-    print_success "✓ La résolution DNS fonctionne correctement!"
-    print_success "✓ Le serveur $AD_FQDN est accessible"
+# Demander à l'utilisateur s'il veut configurer le DNS
+if [ "$DNS_CONFIGURED" = true ]; then
+    read -p "Voulez-vous reconfigurer le DNS? (oui/non) [non]: " CONFIGURE_DNS
+    CONFIGURE_DNS=${CONFIGURE_DNS:-non}
 else
-    print_warning "⚠ La résolution DNS a échoué ou le serveur n'est pas accessible"
-    print_info "Vérifiez votre configuration DNS et assurez-vous que le serveur AD est en ligne"
+    print_warning "⚠ Aucune configuration DNS personnalisée détectée"
+    print_info "📌 Configuration DNS recommandée pour l'intégration LDAPS"
+    echo ""
+    read -p "Voulez-vous configurer le DNS maintenant? (oui/non) [oui]: " CONFIGURE_DNS
+    CONFIGURE_DNS=${CONFIGURE_DNS:-oui}
 fi
 
-# Afficher la configuration DNS active
-print_info "Configuration DNS active:"
-resolvectl status | grep -A 5 "DNS Servers"
+if [[ $CONFIGURE_DNS =~ ^[Oo][Uu][Ii]$ ]]; then
+    print_section "CONFIGURATION DNS POUR LDAPS"
+    
+    # Demander l'IP du serveur DNS (Active Directory)
+    while true; do
+        read -p "Entrez l'adresse IP du serveur DNS (Active Directory) (ex: 192.168.1.10): " DNS_SERVER_IP
+        if [[ $DNS_SERVER_IP =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+            print_success "Serveur DNS: $DNS_SERVER_IP"
+            break
+        else
+            print_error "Adresse IP invalide. Veuillez réessayer."
+        fi
+    done
+    
+    # Demander le nom de domaine
+    read -p "Entrez le nom de domaine (ex: domaines4p2.local): " DOMAIN_NAME
+    print_success "Domaine: $DOMAIN_NAME"
+    
+    # Demander le FQDN de l'AD pour le test DNS
+    read -p "Entrez le FQDN de votre serveur AD pour tester la résolution DNS (ex: srv-ad1.domaines4p2.local): " AD_FQDN
+    print_success "FQDN de l'AD pour test: $AD_FQDN"
+    
+    echo ""
+    print_info "Configuration DNS:"
+    echo "  - Serveur DNS: $DNS_SERVER_IP"
+    echo "  - Domaine: $DOMAIN_NAME"
+    echo "  - FQDN AD: $AD_FQDN"
+    echo ""
+    
+    read -p "Confirmer la configuration DNS? (oui/non): " CONFIRM_DNS
+    if [[ $CONFIRM_DNS =~ ^[Oo][Uu][Ii]$ ]]; then
+        
+        print_info "Sauvegarde de la configuration DNS actuelle..."
+        cp /etc/systemd/resolved.conf /etc/systemd/resolved.conf.backup.$(date +%Y%m%d_%H%M%S)
+        print_success "Sauvegarde créée"
+        
+        print_info "Configuration de /etc/systemd/resolved.conf..."
+        cat > /etc/systemd/resolved.conf << EOF
+[Resolve]
+DNS=${DNS_SERVER_IP}
+FallbackDNS=8.8.8.8 8.8.4.4
+Domains=${DOMAIN_NAME}
+DNSSEC=no
+DNSOverTLS=no
+Cache=yes
+DNSStubListener=yes
+EOF
+        
+        print_success "Fichier /etc/systemd/resolved.conf configuré"
+        
+        print_info "Redémarrage du service systemd-resolved..."
+        systemctl restart systemd-resolved
+        sleep 2
+        
+        print_info "Vérification du statut du service..."
+        systemctl status systemd-resolved --no-pager | head -n 5
+        
+        print_success "Configuration DNS terminée"
+        
+        ##############################################################################
+        # TEST DE RÉSOLUTION DNS
+        ##############################################################################
+        
+        print_section "TEST DE RÉSOLUTION DNS"
+        
+        print_info "Test de résolution DNS pour: $AD_FQDN"
+        echo ""
+        
+        # Test avec nslookup
+        if command -v nslookup &> /dev/null; then
+            print_info "Test avec nslookup:"
+            nslookup $AD_FQDN
+            echo ""
+        fi
+        
+        # Test avec dig
+        if command -v dig &> /dev/null; then
+            print_info "Test avec dig:"
+            dig $AD_FQDN +short
+            echo ""
+        fi
+        
+        # Test avec ping
+        print_info "Test de ping (1 paquet):"
+        if ping -c 1 $AD_FQDN &> /dev/null; then
+            print_success "✓ La résolution DNS fonctionne correctement!"
+            print_success "✓ Le serveur $AD_FQDN est accessible"
+        else
+            print_warning "⚠ La résolution DNS a échoué ou le serveur n'est pas accessible"
+            print_info "Vérifiez votre configuration DNS et assurez-vous que le serveur AD est en ligne"
+        fi
+        
+        # Afficher la configuration DNS active
+        print_info "Configuration DNS active:"
+        resolvectl status | grep -A 5 "DNS Servers"
+        
+    else
+        print_warning "Configuration DNS annulée"
+    fi
+else
+    print_info "Configuration DNS ignorée - Vous pourrez la configurer plus tard avec:"
+    print_info "  sudo ./configure_dns.sh"
+fi
 
 ##############################################################################
 # 7. RÉSUMÉ DE L'INSTALLATION
