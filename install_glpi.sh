@@ -3,7 +3,9 @@
 ##############################################################################
 # Script d'installation de GLPI 11.0.0 sur Ubuntu 24.04 LTS
 # Basé sur la procédure d'installation GLPI V11 2025
-# Auteur: Script automatisé basé sur la procédure de IRATNI Hocine
+# 
+# Fait par IRATNI Hocine
+# Pour toute information contactez moi par mail sur : hocineira@gmail.com
 ##############################################################################
 
 # Couleurs pour l'affichage
