@@ -92,43 +92,10 @@ if [[ ! $CONFIRM =~ ^[Oo][Uu][Ii]$ ]]; then
 fi
 
 ##############################################################################
-# 1. CONFIGURATION DNS (PRÉPARATION POUR LDAPS)
+# 1. PRÉPARATION DU SERVEUR
 ##############################################################################
 
-print_section "1. CONFIGURATION DNS"
-
-print_info "Sauvegarde de la configuration DNS actuelle..."
-cp /etc/systemd/resolved.conf /etc/systemd/resolved.conf.backup.$(date +%Y%m%d_%H%M%S)
-print_success "Sauvegarde créée"
-
-print_info "Configuration de /etc/systemd/resolved.conf..."
-cat > /etc/systemd/resolved.conf << EOF
-[Resolve]
-DNS=${DNS_SERVER_IP}
-FallbackDNS=8.8.8.8 8.8.4.4
-Domains=${DOMAIN_NAME}
-DNSSEC=no
-DNSOverTLS=no
-Cache=yes
-DNSStubListener=yes
-EOF
-
-print_success "Fichier /etc/systemd/resolved.conf configuré"
-
-print_info "Redémarrage du service systemd-resolved..."
-systemctl restart systemd-resolved
-sleep 2
-
-print_info "Vérification du statut du service..."
-systemctl status systemd-resolved --no-pager | head -n 5
-
-print_success "Configuration DNS terminée"
-
-##############################################################################
-# 2. PRÉPARATION DU SERVEUR
-##############################################################################
-
-print_section "2. PRÉPARATION DU SERVEUR"
+print_section "1. PRÉPARATION DU SERVEUR"
 
 print_info "Mise à jour du système..."
 apt update && apt upgrade -y
