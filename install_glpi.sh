@@ -80,32 +80,10 @@ while true; do
     fi
 done
 
-# Demander l'IP du serveur DNS (Active Directory)
-while true; do
-    read -p "Entrez l'adresse IP du serveur DNS (Active Directory) (ex: 192.168.1.10): " DNS_SERVER_IP
-    if [[ $DNS_SERVER_IP =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
-        print_success "Serveur DNS: $DNS_SERVER_IP"
-        break
-    else
-        print_error "Adresse IP invalide. Veuillez réessayer."
-    fi
-done
-
-# Demander le nom de domaine
-read -p "Entrez le nom de domaine (ex: domaines4p2.local): " DOMAIN_NAME
-print_success "Domaine: $DOMAIN_NAME"
-
-# Demander le FQDN de l'AD pour le test DNS
-read -p "Entrez le FQDN de votre serveur AD pour tester la résolution DNS (ex: srv-ad1.domaines4p2.local): " AD_FQDN
-print_success "FQDN de l'AD pour test: $AD_FQDN"
-
 echo ""
 print_info "Récapitulatif de la configuration:"
 echo "  - IP du serveur GLPI: $SERVER_IP"
 echo "  - Mot de passe DB: ********"
-echo "  - Serveur DNS (AD): $DNS_SERVER_IP"
-echo "  - Domaine: $DOMAIN_NAME"
-echo "  - FQDN AD (test): $AD_FQDN"
 echo ""
 read -p "Voulez-vous continuer l'installation avec ces paramètres? (oui/non): " CONFIRM
 if [[ ! $CONFIRM =~ ^[Oo][Uu][Ii]$ ]]; then
