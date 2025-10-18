@@ -176,10 +176,10 @@ chown www-data:www-data -R /var/www/html/
 print_success "Permissions configurées"
 
 ##############################################################################
-# 5. CONFIGURATION DU SERVEUR WEB APACHE
+# 4. CONFIGURATION DU SERVEUR WEB APACHE
 ##############################################################################
 
-print_section "5. CONFIGURATION DU SERVEUR WEB APACHE"
+print_section "4. CONFIGURATION DU SERVEUR WEB APACHE"
 
 print_info "Création du fichier de configuration Apache pour GLPI..."
 cat > /etc/apache2/sites-available/glpi.conf << EOF
