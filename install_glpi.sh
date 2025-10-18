@@ -111,10 +111,10 @@ ufw allow 443
 print_success "Pare-feu configuré (ports 80 et 443 ouverts)"
 
 ##############################################################################
-# 3. CONFIGURATION DE LA BASE DE DONNÉES MARIADB
+# 2. CONFIGURATION DE LA BASE DE DONNÉES MARIADB
 ##############################################################################
 
-print_section "3. CONFIGURATION DE LA BASE DE DONNÉES MARIADB"
+print_section "2. CONFIGURATION DE LA BASE DE DONNÉES MARIADB"
 
 print_info "Sécurisation de MariaDB..."
 print_warning "Vous allez devoir répondre aux questions de sécurisation:"
