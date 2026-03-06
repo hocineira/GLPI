@@ -1,12 +1,15 @@
 #!/bin/bash
 
 ##############################################################################
-# Script d'installation de GLPI 11.0.0 sur Ubuntu 24.04 LTS
+# Script d'installation de GLPI (dernière version) sur Ubuntu 24.04 LTS
 # Basé sur la procédure d'installation GLPI V11 2025
 # 
 # Fait par IRATNI Hocine
 # Pour toute information contactez moi par mail sur : hocineira@gmail.com
 ##############################################################################
+
+# Version fallback si la récupération automatique échoue
+FALLBACK_VERSION="11.0.6"
 
 # Couleurs pour l'affichage
 RED='\033[0;31m'
@@ -47,7 +50,31 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-print_section "INSTALLATION DE GLPI 11.0.0 SUR UBUNTU"
+##############################################################################
+# DÉTECTION AUTOMATIQUE DE LA DERNIÈRE VERSION GLPI
+##############################################################################
+
+print_info "Détection de la dernière version de GLPI via l'API GitHub..."
+
+# Tenter de récupérer la dernière version depuis l'API GitHub
+if command -v curl &> /dev/null; then
+    LATEST_TAG=$(curl -s --max-time 10 "https://api.github.com/repos/glpi-project/glpi/releases/latest" | grep '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')
+fi
+
+# Vérifier si on a récupéré une version valide (format x.y.z)
+if [[ "$LATEST_TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    GLPI_VERSION="$LATEST_TAG"
+    print_success "Dernière version détectée : $GLPI_VERSION"
+else
+    GLPI_VERSION="$FALLBACK_VERSION"
+    print_warning "Impossible de récupérer la dernière version depuis GitHub"
+    print_info "Utilisation de la version fallback : $GLPI_VERSION"
+fi
+
+GLPI_DOWNLOAD_URL="https://github.com/glpi-project/glpi/releases/download/${GLPI_VERSION}/glpi-${GLPI_VERSION}.tgz"
+GLPI_ARCHIVE="glpi-${GLPI_VERSION}.tgz"
+
+print_section "INSTALLATION DE GLPI ${GLPI_VERSION} SUR UBUNTU"
 print_info "Ce script va installer GLPI en suivant la procédure complète"
 echo ""
 
@@ -160,12 +187,31 @@ print_section "3. INSTALLATION DE GLPI"
 print_info "Déplacement vers le répertoire /tmp/..."
 cd /tmp/
 
-print_info "Téléchargement de GLPI 11.0.0..."
-wget https://github.com/glpi-project/glpi/releases/download/11.0.0/glpi-11.0.0.tgz
-print_success "GLPI 11.0.0 téléchargé"
+print_info "Téléchargement de GLPI ${GLPI_VERSION}..."
+wget "$GLPI_DOWNLOAD_URL"
+
+# Vérifier si le téléchargement a réussi
+if [ ! -f "$GLPI_ARCHIVE" ]; then
+    print_error "Échec du téléchargement de GLPI ${GLPI_VERSION}"
+    # Essayer le fallback si la version détectée n'est pas déjà le fallback
+    if [ "$GLPI_VERSION" != "$FALLBACK_VERSION" ]; then
+        print_warning "Tentative avec la version fallback ${FALLBACK_VERSION}..."
+        GLPI_VERSION="$FALLBACK_VERSION"
+        GLPI_DOWNLOAD_URL="https://github.com/glpi-project/glpi/releases/download/${GLPI_VERSION}/glpi-${GLPI_VERSION}.tgz"
+        GLPI_ARCHIVE="glpi-${GLPI_VERSION}.tgz"
+        wget "$GLPI_DOWNLOAD_URL"
+        if [ ! -f "$GLPI_ARCHIVE" ]; then
+            print_error "Échec du téléchargement de la version fallback. Abandon."
+            exit 1
+        fi
+    else
+        exit 1
+    fi
+fi
+print_success "GLPI ${GLPI_VERSION} téléchargé"
 
 print_info "Décompression de l'archive..."
-tar -xvf glpi-11.0.0.tgz > /dev/null 2>&1
+tar -xvf "$GLPI_ARCHIVE" > /dev/null 2>&1
 print_success "Archive décompressée"
 
 print_info "Déplacement dans le dossier web Apache..."
@@ -387,7 +433,7 @@ print_section "INSTALLATION TERMINÉE"
 
 echo ""
 print_success "╔════════════════════════════════════════════════════════════════╗"
-print_success "║          INSTALLATION DE GLPI 11.0.0 TERMINÉE                  ║"
+print_success "║          INSTALLATION DE GLPI ${GLPI_VERSION} TERMINÉE                  ║"
 print_success "╚════════════════════════════════════════════════════════════════╝"
 echo ""
 
